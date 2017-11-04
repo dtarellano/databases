@@ -1,23 +1,59 @@
+var bluebird = require('bluebird');
 var db = require('../db');
+
 
 module.exports = {
   messages: {
     get: function () {
-      db.query('SELECT * FROM messages;', function(err, result) {
-        if (err) {
-          console.log('error');
-        } else {
-          console.log(result[0]);
-          console.log(result[0].message);
-          return result;
-        }
+      return new Promise((resolve, reject) => {
+        db.query('SELECT messages.id,users.name, rooms.roomname, messages.message FROM messages LEFT OUTER JOIN users ON messages.id_users = users.id LEFT JOIN rooms ON messages.id_rooms = rooms.id;', function(err, result) {
+          if (err) {
+            return reject(err);
+          } else {
+            resolve(result);
+          }
+        });
+      }).then(result => {
+        console.log(result);
+        return result;
       });
     }, // a function which produces all the messages
     post: function (data) {
-      console.log(data);
-      db.query(`INSERT INTO rooms (roomname) VALUES ("${data.roomname}")`);
-      db.query(`INSERT INTO messages (id_users, id_rooms, message) VALUES ((SELECT id FROM users WHERE name = "${data.username}"), (SELECT id FROM rooms WHERE roomname = "${data.roomname}"), "${data.text}")`);
-    } // a function which can be used to insert a message into the database
+      return new Promise((resolve, reject) => {
+        db.query('SELECT roomname FROM rooms', function(err, result) {
+          if (err) { 
+            return reject (err);
+          } else {
+            resolve(result);
+          }
+        });
+      }).then(result => {
+        if (result.length > 0) {
+          var bool = false;
+          result.forEach(function(value) {
+            if (data.roomname === value.roomname) {
+              bool = true;
+            } 
+          });  
+          if (bool === false) {  
+            var roomname = db.escape(data.roomname);
+            var sql = 'INSERT INTO rooms (roomname) VALUES (' + roomname + ');';
+            db.query(sql);
+          }
+        } else {
+          var roomname = db.escape(data.roomname);
+          var sql = 'INSERT INTO rooms (roomname) VALUES (' + roomname + ');';
+          db.query(sql);
+        }
+  
+      }).then( () => {
+        console.log(data);
+        var username = db.escape(data.username);
+        var roomname = db.escape(data.roomname);
+        var text = db.escape(data.text);
+        db.query(`INSERT INTO messages (id_users, id_rooms, message) VALUES ((SELECT id FROM users WHERE name = ${username}), (SELECT id FROM rooms WHERE roomname = ${roomname}), ${text})`);
+      });// a function which can be used to insert a message into the database
+    }
   },
 
   users: {
@@ -32,25 +68,28 @@ module.exports = {
       });
     },
     post: function (data) {
-      console.log(data);
       db.query('SELECT name FROM users', function(err, result) {
-        console.log(result);
         if (result.length > 0) {
+          var bool = false;
           result.forEach(function(value) {
-            console.log(value);
-            if (data.username === value.name) {
-              console.log('yiiiissss');
-              return;
-            } else {
-              console.log(data.username);
-              db.query(`INSERT INTO users (name) VALUES ("${data.username}");`);
-            }
-          });
+            if (data.name === value.name) {
+              bool = true;
+            } 
+          });  
+          if (bool === false) {  
+            var userID = db.escape(data.name);
+            var sql = 'INSERT INTO users (name) VALUES (' + userID + ');';
+            db.query(sql);
+          }
         } else {
-          db.query(`INSERT INTO users (name) VALUES ("${data.username}");`);
+          var userID = db.escape(data.name);
+          var sql = 'INSERT INTO users (name) VALUES (' + userID + ');';
+          db.query(sql);
         }
+  
       });
     }
   }
+  
 };
 

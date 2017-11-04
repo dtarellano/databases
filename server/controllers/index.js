@@ -5,18 +5,26 @@ var Promise = require('bluebird');
 module.exports = {
   messages: {
     get: function (req, res) {
-      // return new Promise((resolve, reject) => {
-      //   var messages = models.messages.get();
-      //   req.onload = function
-      // }).then(response => {
-      //   console.log(response);
-      // });
+      return new Promise((resolve, reject) => {
+        if (models.messages.get() !== undefined) {
+          resolve(models.messages.get());
+        }
+      }).then(result =>{
+
+        result.sort(function(a, b) {
+          return a['id'] - b['id'];
+        });
+
+        var results = {results: result};
+        res.writeHead(200, 'good job');
+        res.end(JSON.stringify(results));
+      });
     }, // a function which handles a get request for all messages
     post: function (req, res) {
       var data = '';
       req.on('data', function(chunk) {
         data = data += chunk;
-        console.log(data);
+        console.log('iiiiii', data);
       });
       req.on('end', function() {
         models.messages.post(qs.parse(data));
